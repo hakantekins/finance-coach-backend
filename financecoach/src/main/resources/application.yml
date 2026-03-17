@@ -1,0 +1,71 @@
+# ============================================================
+# AI Finance Coach - Uygulama Konfigürasyonu (Production Ready)
+# ============================================================
+
+spring:
+  application:
+    name: ai-finance-coach
+
+  # ── Veritabanı Bağlantısı ──────────────────────────────────
+  datasource:
+    # Render'dan gelecek DATABASE_URL çevresel değişkenini okur
+    url: ${DATABASE_URL}
+    driver-class-name: org.postgresql.Driver
+
+    hikari:
+      pool-name: FinanceCoachHikariPool
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+
+  # ── JPA / Hibernate ───────────────────────────────────────
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: public
+        jdbc:
+          time_zone: UTC
+
+# ── Sunucu Ayarları ──────────────────────────────────────────
+server:
+  # Render'ın atadığı dinamik portu yakalamak için PORT değişkeni şart
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# ── JWT ve AI Coach Konfigürasyonu ───────────────────────────
+app:
+  jwt:
+    # Güvenlik için secret key'i Render'dan vereceğiz
+    secret: ${JWT_SECRET}
+    expiration-ms: 86400000
+  ai:
+    model: "llama-3.1-8b-instant"
+    simulation-mode: false
+    max-transactions-in-prompt: 15
+    base-url: "https://api.groq.com/openai/v1"
+    # Groq API key'i gizlendi, Render'dan eklenecek
+    api-key: ${AI_API_KEY}
+
+# ── Scraper Ayarları ─────────────────────────────────────────
+scraper:
+  cron: "0 0 3 * * MON"
+
+# ── Loglama ───────────────────────────────────────────────────
+logging:
+  level:
+    root: INFO
+    # Production ortamında gereksiz log kalabalığını önlemek için INFO yaptık
+    com.financecoach: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
