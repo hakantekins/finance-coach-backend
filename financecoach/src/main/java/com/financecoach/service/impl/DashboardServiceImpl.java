@@ -34,17 +34,29 @@ public class DashboardServiceImpl extends BaseAuthService implements DashboardSe
 
         log.debug("Dashboard verisi çekiliyor: userId={}", currentUser.getId());
 
-        // VIEW'dan tek satır çek
-        DashboardSummary summary = dashboardRepository
-                .findByUserId(currentUser.getId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Dashboard verisi bulunamadı. Kullanıcı ID: " + currentUser.getId()
-                ));
+        java.util.Optional<DashboardSummary> summaryOpt = dashboardRepository.findByUserId(currentUser.getId());
 
-        log.debug("Dashboard verisi başarıyla çekildi: userId={}, bakiye={}",
-                currentUser.getId(), summary.getNetBalance());
-
-        return mapToResponse(summary);
+        if (summaryOpt.isPresent()) {
+            // Veritabanında (VIEW) kayıt varsa normal şekilde çevir ve gönder
+            log.debug("Dashboard verisi başarıyla çekildi: userId={}", currentUser.getId());
+            return mapToResponse(summaryOpt.get());
+        } else {
+            // Yeni kullanıcıysa, boş/sıfırlı bir DashboardResponse (DTO) oluştur ve gönder
+            log.info("Kullanıcı (ID:{}) için henüz işlem yok, varsayılan dashboard döndürülüyor.", currentUser.getId());
+            return DashboardResponse.builder()
+                    .userId(currentUser.getId())
+                    .fullName(currentUser.getFullName())
+                    .totalIncome(java.math.BigDecimal.ZERO)
+                    .totalExpense(java.math.BigDecimal.ZERO)
+                    .netBalance(java.math.BigDecimal.ZERO)
+                    .currentMonthExpenseTotal(java.math.BigDecimal.ZERO)
+                    .potentialMonthlySavings(java.math.BigDecimal.ZERO)
+                    .monthlySavingsGoal(currentUser.getMonthlySavingsGoal())
+                    .declaredMonthlyIncome(currentUser.getMonthlyIncome())
+                    .savingsGoalProgressPct(0.0)
+                    .smartSpendingScore(0.0)
+                    .build();
+        }
     }
 
     // ─── Private Yardımcılar ─────────────────────────────────────────────────

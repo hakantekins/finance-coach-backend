@@ -33,5 +33,6 @@ public class UpcomingPaymentRequest {
     @Size(max = 500, message = "Açıklama en fazla 500 karakter olabilir")
     private String description;
 
+    @Builder.Default
     private boolean isRecurring = false;
 }

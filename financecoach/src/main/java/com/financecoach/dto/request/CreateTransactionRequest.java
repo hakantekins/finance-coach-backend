@@ -38,8 +38,10 @@ public class CreateTransactionRequest {
      * Default: false
      */
     @JsonProperty("isFixed")
+    @Builder.Default
     private boolean isFixed = false;
     @JsonProperty("isRecurring")
+    @Builder.Default
     private boolean isRecurring = false;
 
     /** Ayın kaçında tekrarlansın? (1-31) */

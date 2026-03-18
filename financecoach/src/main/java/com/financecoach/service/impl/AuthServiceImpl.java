@@ -11,6 +11,7 @@ import com.financecoach.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -74,7 +75,7 @@ public class AuthServiceImpl implements AuthService {
 
         // 2. Kullanıcıyı çekme
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı: " + request.getEmail()));
+                .orElseThrow(() -> new BadCredentialsException("Kullanıcı bulunamadı"));
 
         log.info("Kullanıcı giriş yaptı: email={}", user.getEmail());
 

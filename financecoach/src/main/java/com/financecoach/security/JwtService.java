@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -71,7 +72,16 @@ public class JwtService {
     }
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        // Backward compatible:
+        // - If secret is Base64 (recommended), decode it
+        // - Otherwise treat as a raw string (common in .env) and use UTF-8 bytes
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secretKey);
+        } catch (IllegalArgumentException ex) {
+            log.warn("JWT secret is not Base64; using raw UTF-8 bytes");
+            keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        }
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

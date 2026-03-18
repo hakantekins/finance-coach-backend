@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -39,15 +40,17 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException ex
     ) {
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
+        for (ObjectError error : ex.getBindingResult().getAllErrors()) {
+            String key = (error instanceof FieldError fe) ? fe.getField() : error.getObjectName();
             String message = error.getDefaultMessage();
-            errors.put(fieldName, message);
-        });
+            if (message != null) {
+                errors.put(key, message);
+            }
+        }
         log.warn("Validation hatası: {}", errors);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Giriş verileri geçersiz"));
+                .body(ApiResponse.error(errors, "Giriş verileri geçersiz"));
     }
 
     /**
