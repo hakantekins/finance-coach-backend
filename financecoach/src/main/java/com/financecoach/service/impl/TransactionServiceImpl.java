@@ -6,6 +6,7 @@ import com.financecoach.dto.response.TransactionResponse;
 import com.financecoach.exception.ResourceNotFoundException;
 import com.financecoach.model.entity.Transaction;
 import com.financecoach.model.entity.User;
+import com.financecoach.model.enums.PaymentMethod;
 import com.financecoach.model.enums.TransactionType;
 import com.financecoach.repository.TransactionRepository;
 import com.financecoach.service.BaseAuthService;
@@ -48,6 +49,11 @@ public class TransactionServiceImpl extends BaseAuthService implements Transacti
                 )
                 .isFixed(request.isFixed())
                 .isRecurring(request.isRecurring())
+                .paymentMethod(
+                        request.getPaymentMethod() != null
+                                ? request.getPaymentMethod()
+                                : PaymentMethod.CASH
+                )
                 .recurringDay(request.getRecurringDay())
                 .build();
 
@@ -118,6 +124,7 @@ public class TransactionServiceImpl extends BaseAuthService implements Transacti
                 .transactionDate(transaction.getTransactionDate())
                 .userId(transaction.getUser().getId())
                 .isFixed(transaction.isFixed())
+                .paymentMethod(transaction.getPaymentMethod())
                 .isRecurring(transaction.isRecurring())
                 .recurringDay(transaction.getRecurringDay())
                 .createdAt(transaction.getCreatedAt())

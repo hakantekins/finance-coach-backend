@@ -1,6 +1,7 @@
 package com.financecoach.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.financecoach.model.enums.PaymentMethod;
 import com.financecoach.model.enums.TransactionType;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -43,6 +44,10 @@ public class CreateTransactionRequest {
     @JsonProperty("isRecurring")
     @Builder.Default
     private boolean isRecurring = false;
+
+    @JsonProperty("paymentMethod")
+    @Builder.Default
+    private PaymentMethod paymentMethod = PaymentMethod.CASH;
 
     /** Ayın kaçında tekrarlansın? (1-31) */
     private Integer recurringDay;

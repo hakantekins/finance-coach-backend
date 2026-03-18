@@ -1,6 +1,7 @@
 package com.financecoach.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.financecoach.model.enums.PaymentMethod;
 import com.financecoach.model.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -46,6 +47,15 @@ public class Transaction {
     @Column(name = "is_fixed", nullable = false)
     @Builder.Default
     private boolean isFixed = false;
+
+    /**
+     * Harcamalarda kullanılan ödeme yöntemi.
+     * Not: Income kayıtlarında UI sadece EXPENSE için gösterir.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false, length = 10)
+    @Builder.Default
+    private PaymentMethod paymentMethod = PaymentMethod.CASH;
     /**
      * Tekrarlayan işlem mi? (Maaş, kira, Netflix vb.)
      * true ise her ayın recurringDay gününde otomatik oluşturulur.

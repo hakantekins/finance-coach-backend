@@ -1,6 +1,7 @@
 package com.financecoach.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.financecoach.model.enums.PaymentMethod;
 import com.financecoach.model.enums.TransactionType;
 import lombok.*;
 
@@ -24,6 +25,9 @@ public class TransactionResponse {
 
     @JsonProperty("isFixed")
     private boolean isFixed;
+
+    @JsonProperty("paymentMethod")
+    private PaymentMethod paymentMethod;
 
     @JsonProperty("isRecurring")
     private boolean isRecurring;

@@ -180,7 +180,7 @@ public class PromptGenerator {
         }
 
         StringBuilder prompt = new StringBuilder();
-        prompt.append(String.format("'%s' ürünü için market fiyatları:%n%n", productName));
+        prompt.append(String.format("'%s' ürünü için mağaza fiyatları:%n%n", productName));
 
         marketPrices.stream()
                 .sorted(Comparator.comparing(MarketPriceResponse::getPrice))
@@ -197,7 +197,7 @@ public class PromptGenerator {
         ));
 
         prompt.append(String.format(
-                "%n'%s' ürününü en uygun marketten alarak ne kadar tasarruf edebileceğimi hesapla.",
+                "%n'%s' ürününü en uygun mağazadan alarak ne kadar tasarruf edebileceğimi hesapla.",
                 productName
         ));
         prompt.append(TURKISH_SUFFIX);
@@ -213,8 +213,8 @@ public class PromptGenerator {
     public String simulateAdvice(String prompt) {
         log.info("Simülasyon modu: gerçek LLM API çağrısı yapılmıyor");
 
-        if (prompt.contains("market fiyatları")) {
-            return "En ucuz marketi tercih ederek bu üründe tasarruf yapabilirsiniz. " +
+        if (prompt.contains("mağaza fiyatları")) {
+            return "En ucuz mağazayı tercih ederek bu üründe tasarruf yapabilirsiniz. " +
                     "Alışveriş listenizi önceden hazırlayarak gereksiz harcamalardan kaçının.";
         }
 

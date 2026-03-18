@@ -6,9 +6,13 @@ import com.financecoach.dto.response.SmartCartResponse;
 import com.financecoach.exception.ResourceNotFoundException;
 import com.financecoach.model.entity.CartItem;
 import com.financecoach.model.entity.MarketPrice;
+import com.financecoach.model.entity.Transaction;
 import com.financecoach.model.entity.User;
+import com.financecoach.model.enums.PaymentMethod;
+import com.financecoach.model.enums.TransactionType;
 import com.financecoach.repository.CartItemRepository;
 import com.financecoach.repository.MarketPriceRepository;
+import com.financecoach.repository.TransactionRepository;
 import com.financecoach.service.BaseAuthService;
 import com.financecoach.service.CartService;
 import com.financecoach.util.ProductNameNormalizer;
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,6 +35,7 @@ public class CartServiceImpl extends BaseAuthService implements CartService {
 
     private final CartItemRepository cartItemRepository;
     private final MarketPriceRepository marketPriceRepository;
+    private final TransactionRepository transactionRepository;
 
     // ─── SEPETE EKLE ─────────────────────────────────────────────────────────
 
@@ -212,13 +218,49 @@ public class CartServiceImpl extends BaseAuthService implements CartService {
             throw new RuntimeException("Sepetiniz boş, tamamlanacak alışveriş yok.");
         }
 
+        // 1) Sepet kalemlerini "Expense(TransactionType.EXPENSE)" olarak kaydet
+        List<Transaction> expensesToInsert = new ArrayList<>(items.size());
+        for (CartItem item : items) {
+            CartItemResponse computed = buildCartItemResponse(item);
+            BigDecimal amount = computed.getTotalCost();
+
+            if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0
+                    || computed.getCheapestMarket() == null) {
+                throw new RuntimeException(
+                        "Sepet kalemi için fiyat bulunamadı: " + item.getProductName());
+            }
+
+            String category = computed.getCategory();
+            String description = "Sepet alışverişi: " + item.getProductName()
+                    + " (" + computed.getCheapestMarket() + ")";
+
+            Transaction expense = Transaction.builder()
+                    .user(user)
+                    .amount(amount)
+                    .type(TransactionType.EXPENSE)
+                    .category(category)
+                    .description(description)
+                    .transactionDate(LocalDate.now())
+                    .isFixed(false)
+                    .isRecurring(false)
+                    .paymentMethod(PaymentMethod.CASH)
+                    .build();
+
+            expensesToInsert.add(expense);
+        }
+
+        transactionRepository.saveAll(expensesToInsert);
+
+        // 2) CartItems'ı tamamlandı olarak işaretle
         OffsetDateTime now = OffsetDateTime.now();
         for (CartItem item : items) {
             item.setCompleted(true);
             item.setCompletedAt(now);
         }
         cartItemRepository.saveAll(items);
-        log.info("Alışveriş tamamlandı: userId={}, {} ürün", user.getId(), items.size());
+
+        log.info("Alışveriş tamamlandı: userId={}, {} ürün, {} gider kaydı",
+                user.getId(), items.size(), expensesToInsert.size());
     }
 
     // ─── SEPET SAYISI ────────────────────────────────────────────────────────

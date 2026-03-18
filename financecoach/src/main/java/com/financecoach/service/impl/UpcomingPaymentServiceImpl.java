@@ -4,7 +4,12 @@ import com.financecoach.dto.request.UpcomingPaymentRequest;
 import com.financecoach.dto.response.UpcomingPaymentResponse;
 import com.financecoach.exception.ResourceNotFoundException;
 import com.financecoach.model.entity.UpcomingPayment;
+import com.financecoach.model.entity.Transaction;
 import com.financecoach.model.entity.User;
+import com.financecoach.model.enums.PaymentCategory;
+import com.financecoach.model.enums.PaymentMethod;
+import com.financecoach.model.enums.TransactionType;
+import com.financecoach.repository.TransactionRepository;
 import com.financecoach.repository.UpcomingPaymentRepository;
 import com.financecoach.service.BaseAuthService;
 import com.financecoach.service.UpcomingPaymentService;
@@ -27,6 +32,7 @@ import java.util.stream.Collectors;
 public class UpcomingPaymentServiceImpl extends BaseAuthService implements UpcomingPaymentService {
 
     private final UpcomingPaymentRepository paymentRepository;
+    private final TransactionRepository transactionRepository;
 
     @Override
     @Transactional
@@ -94,6 +100,25 @@ public class UpcomingPaymentServiceImpl extends BaseAuthService implements Upcom
 
         payment.setPaid(true);
 
+        // Kullanıcı "Ödendi" dediğinde bu kayıt otomatik olarak Expense(TransactionType.EXPENSE)
+        // olarak transactions tablosuna eklenir.
+        PaymentMethod paymentMethod = derivePaymentMethod(payment.getCategory(), payment.getCreditLimit());
+        String expenseCategory = mapPaymentCategoryToExpenseCategory(payment.getCategory());
+        String expenseDescription = buildPaymentDescription(payment);
+
+        Transaction expense = Transaction.builder()
+                .user(currentUser)
+                .amount(payment.getAmount())
+                .type(TransactionType.EXPENSE)
+                .category(expenseCategory)
+                .description(expenseDescription)
+                .transactionDate(payment.getDueDate())
+                .isFixed(false)
+                .isRecurring(false)
+                .paymentMethod(paymentMethod)
+                .build();
+        transactionRepository.save(expense);
+
         // Tekrarlayan ödeme ise bir sonraki ay için yeni kayıt oluştur
         if (payment.isRecurring()) {
             UpcomingPayment nextPayment = UpcomingPayment.builder()
@@ -148,5 +173,36 @@ public class UpcomingPaymentServiceImpl extends BaseAuthService implements Upcom
                 .isUrgent(isUrgent)
                 .createdAt(p.getCreatedAt())
                 .build();
+    }
+
+    private PaymentMethod derivePaymentMethod(PaymentCategory category, java.math.BigDecimal creditLimit) {
+        // Basit kural:
+        // - KREDI_KARTI / TAKSIT => CARD
+        // - creditLimit doluysa => CARD
+        if (creditLimit != null) {
+            return PaymentMethod.CARD;
+        }
+        if (category == PaymentCategory.KREDI_KARTI || category == PaymentCategory.TAKSIT) {
+            return PaymentMethod.CARD;
+        }
+        return PaymentMethod.CASH;
+    }
+
+    private String mapPaymentCategoryToExpenseCategory(PaymentCategory category) {
+        if (category == null) return "Diğer";
+        return switch (category) {
+            case KREDI_KARTI -> "Kredi Kartı";
+            case FATURA -> "Fatura";
+            case KIRA -> "Kira";
+            case TAKSIT -> "Taksit";
+            case DIGER -> "Diğer";
+        };
+    }
+
+    private String buildPaymentDescription(UpcomingPayment payment) {
+        if (payment.getDescription() != null && !payment.getDescription().isBlank()) {
+            return payment.getDescription();
+        }
+        return "Ödeme: " + payment.getTitle();
     }
 }
