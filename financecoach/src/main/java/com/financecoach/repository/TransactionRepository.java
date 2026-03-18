@@ -59,6 +59,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     );
 
     @Query("""
+        SELECT COALESCE(SUM(t.amount), 0)
+        FROM Transaction t
+        WHERE t.user.id = :userId
+          AND t.type    = 'EXPENSE'
+          AND t.transactionDate BETWEEN :startDate AND :endDate
+          AND (
+            t.description LIKE '%P4%' OR
+            t.description LIKE '%P5%' OR
+            t.description LIKE '%P6%'
+          )
+    """)
+    BigDecimal findOptimizableExpenseByUserIdAndDateRange(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
         SELECT t.category, SUM(t.amount)
         FROM Transaction t
         WHERE t.user.id = :userId
