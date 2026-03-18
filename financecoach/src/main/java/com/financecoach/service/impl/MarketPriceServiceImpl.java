@@ -6,6 +6,7 @@ import com.financecoach.dto.response.MarketPriceResponse;
 import com.financecoach.model.entity.MarketPrice;
 import com.financecoach.repository.MarketPriceRepository;
 import com.financecoach.service.MarketPriceService;
+import com.financecoach.util.ProductNameNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -76,9 +77,69 @@ public class MarketPriceServiceImpl implements MarketPriceService {
 
     @Override
     public List<MarketPriceResponse> compareByProductName(String productName) {
-        return marketPriceRepository
-                .findLatestPricesByProductName(productName)
-                .stream()
+        if (productName == null || productName.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        String trimmedInput = productName.trim();
+
+        // 1) Önce direkt "contains" ile dene
+        List<MarketPrice> candidates = marketPriceRepository
+                .findByProductNameContainingIgnoreCaseOrderByPriceDateDesc(trimmedInput);
+
+        // 2) Bazı senaryolarda DB'de ürün adında birim olmaz (örn. "Tam Yağlı Süt")
+        //    Frontend ise birimle ister ("Tam Yağlı Süt 1L"). Bu durumda birimi kırpıp tekrar ara.
+        if (candidates.isEmpty()) {
+            String baseName = stripUnitSuffix(trimmedInput);
+            if (!baseName.isBlank()) {
+                candidates = marketPriceRepository
+                        .findByProductNameContainingIgnoreCaseOrderByPriceDateDesc(baseName);
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 3) Eşleştirme önceliği: normalize exact > case-insensitive exact > partial adaylar
+        String normalizedInput = ProductNameNormalizer.normalize(trimmedInput);
+
+        String baseName = stripUnitSuffix(trimmedInput);
+        String normalizedBase = baseName.isBlank()
+                ? ""
+                : ProductNameNormalizer.normalize(baseName);
+
+        List<MarketPrice> normalizedExact = candidates.stream()
+                .filter(mp -> {
+                    String mpNorm = ProductNameNormalizer.normalize(mp.getProductName());
+                    return mpNorm.equals(normalizedInput)
+                            || (!normalizedBase.isBlank() && mpNorm.equals(normalizedBase));
+                })
+                .toList();
+
+        List<MarketPrice> caseExact = candidates.stream()
+                .filter(mp -> mp.getProductName().equalsIgnoreCase(trimmedInput))
+                .toList();
+
+        List<MarketPrice> selectedPrices;
+        if (!normalizedExact.isEmpty()) {
+            selectedPrices = normalizedExact;
+        } else if (!caseExact.isEmpty()) {
+            selectedPrices = caseExact;
+        } else {
+            selectedPrices = candidates;
+        }
+
+        // 4) Market bazında "en güncel" fiyatı seç (priceDate max)
+        Map<String, MarketPrice> latestPerMarket = selectedPrices.stream()
+                .filter(mp -> mp.getMarketName() != null && !mp.getMarketName().isBlank())
+                .collect(Collectors.toMap(
+                        MarketPrice::getMarketName,
+                        mp -> mp,
+                        (a, b) -> a.getPriceDate().isAfter(b.getPriceDate()) ? a : b
+                ));
+
+        return latestPerMarket.values().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -187,5 +248,27 @@ public class MarketPriceServiceImpl implements MarketPriceService {
                 .active(mp.isActive())
                 .createdAt(mp.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * Girdi sonundaki tipik birim kalıplarını (örn. "1L", "500 g", "15'li") atar.
+     * Amaç: "Tam Yağlı Süt 1L" → "Tam Yağlı Süt" eşleşmesini yakalamak.
+     */
+    private String stripUnitSuffix(String input) {
+        if (input == null) return "";
+
+        String s = input.trim();
+
+        // 1) sayılı birimler (1L, 500g, 2 kg, 250 ml, 1 lt, vb.)
+        s = s.replaceAll(
+                "(?iu)\\s*\\b\\d+[\\.,]?\\d*\\s*(?:litre|lt|ltr|l|mililitre|ml|cl|kilogram|kilo|kg|gram|gr|g|adet|ad|paket|pk)\\b\\s*$",
+                "");
+
+        // 2) adetli/...'li formatı (15'li, 30'lu, 4'lü)
+        s = s.replaceAll(
+                "(?iu)\\s*\\b\\d+\\s*['`]?\\s*(?:lı|li|lu|lü)\\b\\s*$",
+                "");
+
+        return s.trim();
     }
 }

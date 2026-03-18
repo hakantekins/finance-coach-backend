@@ -120,7 +120,13 @@ public class MigrosScraper implements MarketScraper {
 
             // Alternatif: fiyat içeren herhangi bir container
             if (cards.isEmpty()) {
-                cards = doc.select("div:has(> span:containsOwn(TL)):has(img)");
+                // Son çare: ürün sayfasına giden anchor'lar üzerinden dene
+                cards = doc.select("a[href*='/urun/'], a[href*='/product/']");
+            }
+
+            if (cards.isEmpty()) {
+                // En son fallback: tüm linkleri dene (parseCard fiyat olmayanları zaten eler)
+                cards = doc.select("a[href]");
             }
 
             log.debug("Migros {} — {} potansiyel kart", path, cards.size());

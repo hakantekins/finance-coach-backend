@@ -167,7 +167,14 @@ public class MarketPriceController {
                 List<com.financecoach.model.entity.MarketPrice> existing =
                         marketPriceRepository.findByMarketNameIgnoreCaseOrderByPriceDateDesc(marketName);
                 if (!existing.isEmpty()) {
-                    marketPriceRepository.deleteAll(existing);
+                    // Scheduler ile aynı davranış: sadece bugünün kayıtlarını sil.
+                    List<com.financecoach.model.entity.MarketPrice> today =
+                            existing.stream()
+                                    .filter(mp -> mp.getPriceDate() != null && mp.getPriceDate().equals(java.time.LocalDate.now()))
+                                    .toList();
+                    if (!today.isEmpty()) {
+                        marketPriceRepository.deleteAll(today);
+                    }
                 }
 
                 marketPriceRepository.saveAll(scraped);

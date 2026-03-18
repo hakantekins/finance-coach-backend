@@ -125,7 +125,9 @@ public class BimScraper implements MarketScraper {
 
             if (cards.isEmpty()) {
                 // Son çare: fiyat içeren div'leri bul
-                cards = doc.select("div:has(span:containsOwn(TL)), div:has(span:containsOwn(₺))");
+                // (Jsoup :has(...) her ortamda parse edilemeyebiliyor)
+                // parseCard zaten fiyat/isim bulamazsa null döndüğü için anchor'lar üzerinden deniyoruz.
+                cards = doc.select("a[href]");
             }
 
             log.debug("BİM {} — {} potansiyel kart bulundu", categoryPath, cards.size());

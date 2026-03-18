@@ -117,7 +117,9 @@ public class A101Scraper implements MarketScraper {
             }
 
             if (cards.isEmpty()) {
-                cards = doc.select("div:has(h3):has(span:containsOwn(₺))");
+                // Son çare: anchor'lar üzerinden dene (yoksa selector parse hatası yaşamayalım)
+                // parseCard zaten fiyatı/ismi bulamazsa null dönüyor.
+                cards = doc.select("a[href]");
             }
 
             log.debug("A101 {} — {} potansiyel kart", path, cards.size());
