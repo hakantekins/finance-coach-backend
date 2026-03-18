@@ -98,6 +98,12 @@ public class UpcomingPaymentServiceImpl extends BaseAuthService implements Upcom
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Ödeme bulunamadı: id=" + id));
 
+        // Aynı ödeme tekrar "Ödendi" olarak işaretlenirse mükerrer gider kaydı oluşmasın.
+        if (payment.isPaid()) {
+            log.debug("Ödeme zaten ödenmiş: id={}, userId={}", id, currentUser.getId());
+            return mapToResponse(payment);
+        }
+
         payment.setPaid(true);
 
         // Kullanıcı "Ödendi" dediğinde bu kayıt otomatik olarak Expense(TransactionType.EXPENSE)

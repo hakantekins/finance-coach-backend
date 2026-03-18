@@ -63,12 +63,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         FROM Transaction t
         WHERE t.user.id = :userId
           AND t.type    = 'EXPENSE'
-          AND t.transactionDate BETWEEN :startDate AND :endDate
           AND (
             t.description LIKE '%P4%' OR
             t.description LIKE '%P5%' OR
             t.description LIKE '%P6%'
           )
+          AND t.transactionDate BETWEEN :startDate AND :endDate
     """)
     BigDecimal findOptimizableExpenseByUserIdAndDateRange(
             @Param("userId") Long userId,
