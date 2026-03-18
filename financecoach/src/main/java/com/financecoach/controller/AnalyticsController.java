@@ -177,9 +177,11 @@ public class AnalyticsController {
         long transactionCount = transactionRepository
                 .countByUserIdAndDateRange(user.getId(), thisWeekStart, thisWeekEnd);
 
-        long daysPassed = ChronoUnit.DAYS.between(thisWeekStart, today) + 1;
-        BigDecimal dailyAvg = daysPassed > 0
-                ? thisWeekExpense.divide(BigDecimal.valueOf(daysPassed), 2, RoundingMode.HALF_UP)
+        // "Bu hafta" ibaresi tüm Pazartesi–Pazar aralığını ifade eder.
+        // Gelecek günler için veri olmayacağı halde ortalama 7 güne göre hesaplanmalıdır.
+        long weekDays = 7;
+        BigDecimal dailyAvg = weekDays > 0
+                ? thisWeekExpense.divide(BigDecimal.valueOf(weekDays), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
         Map<String, Object> data = new LinkedHashMap<>();
